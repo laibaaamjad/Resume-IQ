@@ -1,0 +1,68 @@
+John Doe
+Email: johndoe@gmail.com | Phone: +1-555-0100 | LinkedIn: linkedin.com/in/johndoe
+GitHub: github.com/johndoe | Portfolio: johndoe.dev
+
+SUMMARY
+-------
+Motivated Computer Science graduate with 2 years of experience building web applications.
+Strong foundation in Python, JavaScript, and React. Passionate about clean code,
+problem solving, and learning new technologies. Looking for a junior software
+engineering role in a fast-paced, collaborative environment.
+
+EDUCATION
+---------
+Bachelor of Science in Computer Science
+University of Technology, Islamabad — 2022
+CGPA: 3.5 / 4.0
+
+SKILLS
+------
+Programming Languages: Python, JavaScript, TypeScript, Java, SQL
+Frontend: React, HTML, CSS, Tailwind CSS, Bootstrap
+Backend: Node.js, Express, Flask, REST API
+Databases: MySQL, PostgreSQL, MongoDB, Redis
+Tools & Platforms: Git, GitHub, Docker, VS Code, Postman, Linux
+Other: Agile, Scrum, Problem Solving, Communication, Teamwork
+
+WORK EXPERIENCE
+---------------
+Junior Web Developer — TechSoft Solutions, Islamabad
+June 2022 – December 2023
+- Developed and maintained 5+ React-based web applications for clients
+- Built REST APIs using Node.js and Express, integrated with PostgreSQL databases
+- Reduced page load time by 40% through performance optimization and caching
+- Collaborated in an agile team of 8 developers using Jira and GitHub
+- Wrote unit tests using Jest, achieving 85% code coverage
+
+Intern — DataByte Pvt. Ltd., Islamabad
+January 2022 – May 2022
+- Assisted in building a data dashboard using Python (Flask) and Chart.js
+- Performed data cleaning and analysis using Pandas and NumPy
+- Documented APIs using Swagger and maintained Confluence pages
+
+PROJECTS
+--------
+E-Commerce Platform (Full Stack)
+- Built a complete e-commerce app with React frontend, Node.js backend, MongoDB
+- Implemented JWT authentication, Stripe payments, and Redis caching
+- Deployed on AWS EC2 with Nginx reverse proxy and GitHub Actions CI/CD
+
+Student Management System (Python/Django)
+- Developed a Django application to manage 500+ student records
+- Integrated role-based access control and PDF report generation
+- Used PostgreSQL for data storage with optimized queries
+
+Sentiment Analysis Tool (NLP)
+- Built a sentiment classifier using Python, scikit-learn, and NLTK
+- Trained on 10,000+ tweets with 88% accuracy
+- Exposed as a REST API using Flask
+
+CERTIFICATIONS
+--------------
+- AWS Certified Cloud Practitioner (2023)
+- Python for Data Science — Coursera (2021)
+- React Developer Certification — Udemy (2022)
+
+LANGUAGES
+---------
+English (Fluent), Urdu (Native)

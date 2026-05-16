@@ -1,0 +1,72 @@
+/*Global*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/*Score Card*/
+.score-card {
+    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+    border: 1px solid rgba(108, 99, 255, 0.3);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.score-number {
+    font-size: 4rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #6C63FF, #48CFAD);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/*Skill Pills*/
+.skill-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin: 3px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-matched {
+    background-color: rgba(0, 200, 83, 0.15);
+    border: 1px solid #00C853;
+    color: #00E676;
+}
+
+.skill-missing {
+    background-color: rgba(213, 0, 0, 0.15);
+    border: 1px solid #D50000;
+    color: #FF5252;
+}
+
+.skill-extra {
+    background-color: rgba(108, 99, 255, 0.15);
+    border: 1px solid #6C63FF;
+    color: #9C8FFF;
+}
+
+/*Tip Cards*/
+.tip-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid #6C63FF;
+    border-radius: 0 8px 8px 0;
+    padding: 0.8rem 1rem;
+    margin: 0.5rem 0;
+}
+
+/*Section Headers*/
+.section-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #6C63FF;
+    border-bottom: 2px solid rgba(108, 99, 255, 0.3);
+    padding-bottom: 0.3rem;
+    margin: 1.5rem 0 1rem 0;
+}
