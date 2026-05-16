@@ -1,2 +1,12 @@
-# Resume-IQ
-ResumeIQ is an AI-powered resume analyzer that compares resumes with job descriptions, extracts skills, detects missing keywords, and generates an ATS-style match score with intelligent feedback.
+# ResumeIQ
+
+AI-powered Resume Analyzer using NLP + Machine Learning
+
+## Features
+- Resume vs Job Description matching
+- Skill extraction using NLP
+- ATS-style score calculation
+- Missing keyword detection
+- Semantic similarity using embeddings
+- Resume classification (optional)
+- Smart improvement suggestions
