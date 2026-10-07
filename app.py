@@ -26,6 +26,13 @@ def load_css():
 
 load_css()
 
+import db
+
+@st.cache_resource
+def _init_db():
+    db.init_db()
+_init_db()
+
 from core.extractor import extract_text
 from core.preprocessor import preprocess, extract_sections
 from core.skill_extractor import extract_skills, extract_skills_by_category, compare_skills
@@ -43,7 +50,11 @@ from utils.report_generator import generate_text_report
 def render_sidebar():
     with st.sidebar:
         st.markdown("## 🧠 ResumeIQ")
-        st.markdown("*AI-Powered Resume Screener*")
+        st.radio("Navigate", ["🔍 Analyze", "📜 History"], key="page")
+        st.caption(f"Signed in as **{st.session_state['user']['username']}**")
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.rerun()
         st.divider()
 
         st.markdown("### ⚙️ Settings")
@@ -78,6 +89,7 @@ def render_sidebar():
         "weight_semantic": weight_semantic,
         "show_raw": show_raw,
         "show_debug": show_debug,
+        "page": st.session_state.get("page", "🔍 Analyze"),
     }
 
 
@@ -353,13 +365,84 @@ def render_missing_skills_bar(missing_skills: list[str], jd_text: str):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+def make_jd_title(jd_text: str) -> str:
+    first = next((l.strip() for l in jd_text.splitlines() if l.strip()), "Untitled job")
+    return first[:200]
+
+
+def require_login():
+    if "user" in st.session_state:
+        return
+    st.markdown("## 🔐 Sign in to ResumeIQ")
+    tab_in, tab_up = st.tabs(["Login", "Sign up"])
+    with tab_in:
+        u = st.text_input("Username", key="li_u")
+        p = st.text_input("Password", type="password", key="li_p")
+        if st.button("Login"):
+            user = db.authenticate(u, p)
+            if user:
+                st.session_state["user"] = {"id": user.id, "username": user.username}
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
+    with tab_up:
+        nu = st.text_input("Choose a username", key="su_u")
+        npw = st.text_input("Choose a password (6+ chars)", type="password", key="su_p")
+        if st.button("Create account"):
+            if len(nu) < 3 or len(npw) < 6:
+                st.error("Username needs 3+ chars and password 6+ chars.")
+            elif db.create_user(nu, npw):
+                st.success("Account created. Switch to the Login tab.")
+            else:
+                st.error("That username is taken.")
+    st.stop()
+
+
+def load_into_analyze(jd_text, resume_text, resume_name):
+    st.session_state["loaded_jd"] = jd_text
+    st.session_state["loaded_resume"] = {"text": resume_text, "name": resume_name}
+    st.session_state["page"] = "🔍 Analyze"
+
+
+def render_history():
+    uid = st.session_state["user"]["id"]
+    st.markdown("## 📜 Analysis History")
+    rows = db.get_history(uid)
+    if not rows:
+        st.info("No analyses yet. Run one from the Analyze page.")
+        return
+    for c in rows:
+        label = f"{c.jd.title}  ×  {c.resume.filename}  |  {c.score:.0f}%  |  {c.created_at:%d %b %Y %H:%M}"
+        with st.expander(label):
+            t1, t2, t3 = st.tabs(["Summary", "Job description", "Resume"])
+            with t1:
+                st.markdown("**Matched:** " + (", ".join(c.matched_skills) or "None"))
+                st.markdown("**Missing:** " + (", ".join(c.missing_skills) or "None"))
+                for tip in c.insights[:6]:
+                    st.markdown(f"- {tip}")
+            with t2:
+                st.text(c.jd.content)
+            with t3:
+                st.text(c.resume.content)
+            b1, b2 = st.columns(2)
+            b1.button("📂 Load into Analyze", key=f"load{c.id}",
+                      on_click=load_into_analyze,
+                      args=(c.jd.content, c.resume.content, c.resume.filename))
+            if b2.button("🗑 Delete", key=f"del{c.id}"):
+                db.delete_comparison(uid, c.id)
+                st.rerun()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  MAIN APP
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    require_login()
     settings = render_sidebar()
+    if settings["page"] == "📜 History":
+        render_history()
+        return
 
     # ── Header ───────────────────────────────────────────────────────────────
     st.markdown("""
@@ -381,20 +464,33 @@ def main():
     with col_left:
         st.markdown("### 📄 Upload Your Resume")
         use_sample = st.checkbox("Use sample resume (for testing)", value=False)
+        resume_text_raw = ""
+        resume_name = ""
+        loaded = st.session_state.get("loaded_resume")
 
-        if use_sample:
+        if loaded:
+            resume_text_raw = loaded["text"]
+            resume_name = loaded["name"]
+            st.info(f"📂 Loaded from history: {resume_name}")
+            if st.button("✖ Clear loaded data"):
+                st.session_state.pop("loaded_resume", None)
+                st.session_state.pop("loaded_jd", None)
+                st.rerun()
+        elif use_sample:
             sample_path = os.path.join(os.path.dirname(__file__), "data", "sample_resume.txt")
             with open(sample_path, "r") as f:
                 resume_text_raw = f.read()
+            resume_name = "sample_resume.txt"
             st.success("✅ Sample resume loaded.")
+
         else:
             uploaded_file = st.file_uploader(
                 "Upload PDF or TXT",
                 type=["pdf", "txt"],
                 help="Scanned PDFs (image-only) may not extract well. Use a text-based PDF."
             )
-            resume_text_raw = ""
             if uploaded_file is not None:
+                resume_name = uploaded_file.name
                 try:
                     with st.spinner("Extracting text from resume..."):
                         resume_text_raw = extract_text(uploaded_file)
@@ -429,7 +525,7 @@ Nice to have:
 """
         jd_text_raw = st.text_area(
             "Paste JD here",
-            value=sample_jd if use_sample else "",
+                        value=st.session_state.get("loaded_jd") or (sample_jd if use_sample else ""),
             height=340,
             placeholder="Paste the full job description text here...",
         )
@@ -465,6 +561,24 @@ Nice to have:
             elapsed = round(time.time() - start, 2)
 
         st.success(f"✅ Analysis complete in {elapsed}s")
+        try:
+            uid = st.session_state["user"]["id"]
+            if db.find_cached(uid, jd_text_raw, resume_text_raw) is None:
+                db.save_comparison(
+                    uid, jd_text_raw, make_jd_title(jd_text_raw),
+                    resume_text_raw, resume_name or "pasted_resume",
+                    {
+                        "score": float(result["score"]),
+                        "matched": list(result["matched_skills"]),
+                        "missing": list(result["missing_skills"]),
+                        "insights": [str(x) for x in
+                                     list(result["quick_wins"]) + list(result["suggestions"]["general_tips"])],
+                    },
+                )
+                st.toast("Saved to history 📜")
+        except Exception as e:
+            st.warning(f"Could not save to history: {e}")
+        
         st.divider()
 
         # ════════════════════════════════════════════════════════════════════

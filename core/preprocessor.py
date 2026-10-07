@@ -29,22 +29,12 @@ _BUILTIN_STOPWORDS = {
 }
 
 def _ensure_nltk_data():
-    """Download required NLTK datasets if not already present."""
-    packages = [
-        ("tokenizers/punkt", "punkt"),
-        ("tokenizers/punkt_tab", "punkt_tab"),
-        ("corpora/stopwords", "stopwords"),
-        ("corpora/wordnet", "wordnet"),
-        ("taggers/averaged_perceptron_tagger", "averaged_perceptron_tagger"),
-    ]
-    for check_path, package_name in packages:
+    """Download NLTK resources if missing. Safe to call repeatedly."""
+    for pkg in ("punkt", "punkt_tab", "stopwords", "wordnet", "omw-1.4"):
         try:
-            nltk.data.find(check_path)
-        except LookupError:
-            try:
-                nltk.download(package_name, quiet=True)
-            except Exception:
-                pass  # Will use fallbacks below
+            nltk.download(pkg, quiet=True)
+        except Exception:
+            pass  # a missing optional package should not crash the app
 
 _ensure_nltk_data()
 
