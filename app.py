@@ -563,8 +563,9 @@ Nice to have:
         st.success(f"✅ Analysis complete in {elapsed}s")
         try:
             uid = st.session_state["user"]["id"]
-            if db.find_cached(uid, jd_text_raw, resume_text_raw) is None:
-                db.save_comparison(
+            cached = db.find_cached(uid, jd_text_raw, resume_text_raw)
+            if cached is None:
+                saved = db.save_comparison(
                     uid, jd_text_raw, make_jd_title(jd_text_raw),
                     resume_text_raw, resume_name or "pasted_resume",
                     {
@@ -575,11 +576,11 @@ Nice to have:
                                      list(result["quick_wins"]) + list(result["suggestions"]["general_tips"])],
                     },
                 )
-                st.toast("Saved to history 📜")
+                st.success(f"Saved to history (record #{saved.id})")
+            else:
+                st.info(f"Already in your history (record #{cached.id})")
         except Exception as e:
-            st.warning(f"Could not save to history: {e}")
-        
-        st.divider()
+            st.error(f"Could not save: {e}")
 
         # ════════════════════════════════════════════════════════════════════
         #  RESULTS — ROW 1: Score + Breakdown
