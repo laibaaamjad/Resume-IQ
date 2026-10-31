@@ -1,0 +1,14 @@
+.git
+.gitignore
+**/__pycache__
+*.pyc
+*.db
+.env
+.env.*
+venv
+.venv
+tests
+*.md
+Jenkinsfile
+docker-compose*.yml
+database/init

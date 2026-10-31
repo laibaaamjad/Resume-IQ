@@ -1,0 +1,56 @@
+# Part II - deployment started by the Jenkins pipeline
+# Differences from Part I (as the assignment asks):
+#   * NO Dockerfile build: the application code is attached as a volume (./ -> /app).
+#     The Part I image from Docker Hub is used only as the Python runtime with
+#     dependencies + models preinstalled, so the stack is up in well under 3 minutes.
+#   * Different host ports and container names, separate DB volume.
+#
+# Host port -> container port
+#   8081 -> 8501   ResumeIQ web app (CI)
+#   3308 -> 3306   MySQL (CI)
+
+name: resumeiq-ci
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: resumeiq-ci-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: resumeiq
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      EVALUATOR_DB_PASSWORD: ${EVALUATOR_DB_PASSWORD}
+    command:
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=64M
+      - --max-connections=50
+    ports:
+      - "3308:3306"
+    volumes:
+      - resumeiq_ci_db_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  app:
+    image: laibaaamjad/resumeiq:v1
+    container_name: resumeiq-ci-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      DATABASE_URL: mysql+pymysql://resumeiq_app:${APP_DB_PASSWORD}@db:3306/resumeiq
+    volumes:
+      - ./:/app                    # code volume (Jenkins workspace) instead of a Dockerfile
+    ports:
+      - "8081:8501"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  resumeiq_ci_db_data:

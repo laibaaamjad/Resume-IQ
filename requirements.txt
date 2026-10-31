@@ -14,3 +14,6 @@ Pillow==10.2.0
 sqlalchemy
 pymysql
 bcrypt
+transformers==4.40.2
+huggingface_hub==0.23.4
+cryptography

@@ -1,0 +1,51 @@
+# Part I - containerized deployment of ResumeIQ on EC2
+# Run:  docker compose up -d        (reads passwords from .env next to this file)
+#
+# Host port -> container port (host ports differ from container ports on purpose)
+#   80   -> 8501   ResumeIQ web app
+#   3307 -> 3306   MySQL
+
+name: resumeiq
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: resumeiq-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: resumeiq
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      EVALUATOR_DB_PASSWORD: ${EVALUATOR_DB_PASSWORD}
+    command:
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=64M
+      - --max-connections=50
+    ports:
+      - "3307:3306"
+    volumes:
+      - resumeiq_db_data:/var/lib/mysql                         # persistent data
+      - ./database/init:/docker-entrypoint-initdb.d:ro           # creates app + evaluator users
+    healthcheck:
+      # TCP (127.0.0.1) so it only passes once the real server is up, not the init server
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  app:
+    image: laibaaamjad/resumeiq:v1
+    build: .
+    container_name: resumeiq-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://resumeiq_app:${APP_DB_PASSWORD}@db:3306/resumeiq
+    ports:
+      - "80:8501"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  resumeiq_db_data:
