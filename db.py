@@ -133,53 +133,44 @@ def find_cached(user_id: int, jd_text: str, resume_text: str) -> Comparison | No
                    Resume.content_hash == _hash(resume_text)))
 
 
-def save_comparison(user_id, jd_text, jd_title, resume_text, resume_filename, result_json):
-    s = Session()
+def save_comparison(user_id: int, jd_text: str, jd_title: str,
+                    resume_text: str, resume_name: str, result: dict,
+                    s3_key: str | None = None) -> Comparison:
+    """result = {"score": float, "matched": [...], "missing": [...], "insights": [...]}
+    Reuses the user's JD / resume rows (matched by content hash) and never stores the
+    same JD + resume pair twice: an existing comparison is returned instead."""
+    jh, rh = _hash(jd_text), _hash(resume_text)
     try:
-        # Check or create JD
-        jd_hash = hash_text(jd_text)
-        jd = s.query(JobDescription).filter_by(content_hash=jd_hash).first()
-        if not jd:
-            jd = JobDescription(title=jd_title, content=jd_text, content_hash=jd_hash)
-            s.add(jd)
+        with session_scope() as s:
+            jd = s.scalar(select(JobDescription).where(
+                JobDescription.user_id == user_id, JobDescription.content_hash == jh))
+            if not jd:
+                jd = JobDescription(user_id=user_id, title=jd_title or "Untitled job",
+                                    content=jd_text, content_hash=jh)
+                s.add(jd)
+            rs = s.scalar(select(Resume).where(
+                Resume.user_id == user_id, Resume.content_hash == rh))
+            if not rs:
+                rs = Resume(user_id=user_id, filename=resume_name, content=resume_text,
+                            content_hash=rh, s3_key=s3_key)
+                s.add(rs)
             s.flush()
 
-        # Check or create Resume
-        resume_hash = hash_text(resume_text)
-        resume = s.query(Resume).filter_by(user_id=user_id, content_hash=resume_hash).first()
-        if not resume:
-            resume = Resume(user_id=user_id, filename=resume_filename, content=resume_text, content_hash=resume_hash)
-            s.add(resume)
+            existing = s.scalar(select(Comparison).where(
+                Comparison.jd_id == jd.id, Comparison.resume_id == rs.id))
+            if existing:
+                return existing
+
+            c = Comparison(user_id=user_id, jd_id=jd.id, resume_id=rs.id,
+                           score=result["score"], matched_skills=result.get("matched", []),
+                           missing_skills=result.get("missing", []),
+                           insights=result.get("insights", []))
+            s.add(c)
             s.flush()
-
-        # Check existing comparison
-        existing = s.query(Comparison).filter_by(jd_id=jd.id, resume_id=resume.id).first()
-        if existing:
-            s.close()
-            return existing
-
-        # Create new comparison
-        c = Comparison(
-            user_id=user_id,
-            jd_id=jd.id,
-            resume_id=resume.id,
-            score=result_json.get("score", 0.0),
-            matched_skills=json.dumps(result_json.get("matched", [])),
-            missing_skills=json.dumps(result_json.get("missing", [])),
-            insights=json.dumps(result_json.get("insights", []))
-        )
-        s.add(c)
-        s.commit()
-        return c
+            return c
     except IntegrityError:
-        s.rollback()
-        # Return existing record if hit by race condition or duplicate key constraint
-        return s.query(Comparison).filter_by(jd_id=jd.id, resume_id=resume.id).first()
-    except Exception as e:
-        s.rollback()
-        raise e
-    finally:
-        s.close()
+        # Same pair saved concurrently (e.g. double click) -> return the stored row
+        return find_cached(user_id, jd_text, resume_text)
 
 
 def get_history(user_id: int) -> list[Comparison]:
